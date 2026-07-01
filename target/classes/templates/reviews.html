@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout :: layout('Performance Reviews', ~{::main}, ~{::styles}, ~{::scripts})}">
+<head>
+    <th:block th:fragment="styles">
+        <!-- Page-specific styles -->
+    </th:block>
+</head>
+<body>
+    <main th:fragment="main">
+        <div class="container-fluid p-0">
+            <div class="row g-4">
+                <!-- Employee Selection and Review Panel -->
+                <div class="col-lg-5">
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-header bg-white border-0 py-3">
+                            <h6 class="fw-bold mb-0 text-outfit">Select Employee to Review</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label for="employeeSelect" class="form-label small fw-semibold">Employee Name</label>
+                                <select class="form-select" id="employeeSelect" onchange="onEmployeeSelected(this.value)">
+                                    <option value="">Select an employee...</option>
+                                </select>
+                            </div>
+                            
+                            <div id="averageScoreDisplay" class="text-center py-4 bg-light rounded-3 d-none">
+                                <span class="d-block text-secondary small text-uppercase">Cumulative Average Rating</span>
+                                <h1 class="fw-bold text-primary mb-0" id="cumAvgScore">0.0</h1>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- New Review Form (Admins & Managers only) -->
+                    <div sec:authorize="hasAnyRole('ROLE_ADMIN', 'ROLE_MANAGER')" class="card border-0 shadow-sm d-none" id="reviewFormCard">
+                        <div class="card-header bg-white border-0 py-3">
+                            <h6 class="fw-bold mb-0 text-outfit">Create New Performance Review</h6>
+                        </div>
+                        <form id="reviewForm" onsubmit="submitReview(event)">
+                            <div class="card-body py-2">
+                                <!-- Range sliders for the 8 metrics -->
+                                <div class="row g-3">
+                                    <!-- Technical Knowledge -->
+                                    <div class="col-12">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <label for="scoreTech" class="form-label small fw-semibold mb-0">Technical Knowledge</label>
+                                            <span class="badge bg-primary" id="valTech">50</span>
+                                        </div>
+                                        <input type="range" class="form-range" id="scoreTech" min="0" max="100" value="50" oninput="updateSliderVal('Tech', this.value)">
+                                    </div>
+                                    <!-- Communication -->
+                                    <div class="col-12">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <label for="scoreComm" class="form-label small fw-semibold mb-0">Communication</label>
+                                            <span class="badge bg-primary" id="valComm">50</span>
+                                        </div>
+                                        <input type="range" class="form-range" id="scoreComm" min="0" max="100" value="50" oninput="updateSliderVal('Comm', this.value)">
+                                    </div>
+                                    <!-- Teamwork -->
+                                    <div class="col-12">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <label for="scoreTeam" class="form-label small fw-semibold mb-0">Teamwork</label>
+                                            <span class="badge bg-primary" id="valTeam">50</span>
+                                        </div>
+                                        <input type="range" class="form-range" id="scoreTeam" min="0" max="100" value="50" oninput="updateSliderVal('Team', this.value)">
+                                    </div>
+                                    <!-- Leadership -->
+                                    <div class="col-12">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <label for="scoreLead" class="form-label small fw-semibold mb-0">Leadership</label>
+                                            <span class="badge bg-primary" id="valLead">50</span>
+                                        </div>
+                                        <input type="range" class="form-range" id="scoreLead" min="0" max="100" value="50" oninput="updateSliderVal('Lead', this.value)">
+                                    </div>
+                                    <!-- Attendance -->
+                                    <div class="col-12">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <label for="scoreAtt" class="form-label small fw-semibold mb-0">Attendance</label>
+                                            <span class="badge bg-primary" id="valAtt">50</span>
+                                        </div>
+                                        <input type="range" class="form-range" id="scoreAtt" min="0" max="100" value="50" oninput="updateSliderVal('Att', this.value)">
+                                    </div>
+                                    <!-- Problem Solving -->
+                                    <div class="col-12">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <label for="scoreProb" class="form-label small fw-semibold mb-0">Problem Solving</label>
+                                            <span class="badge bg-primary" id="valProb">50</span>
+                                        </div>
+                                        <input type="range" class="form-range" id="scoreProb" min="0" max="100" value="50" oninput="updateSliderVal('Prob', this.value)">
+                                    </div>
+                                    <!-- Innovation -->
+                                    <div class="col-12">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <label for="scoreInnov" class="form-label small fw-semibold mb-0">Innovation</label>
+                                            <span class="badge bg-primary" id="valInnov">50</span>
+                                        </div>
+                                        <input type="range" class="form-range" id="scoreInnov" min="0" max="100" value="50" oninput="updateSliderVal('Innov', this.value)">
+                                    </div>
+                                    <!-- Discipline -->
+                                    <div class="col-12">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <label for="scoreDisc" class="form-label small fw-semibold mb-0">Discipline</label>
+                                            <span class="badge bg-primary" id="valDisc">50</span>
+                                        </div>
+                                        <input type="range" class="form-range" id="scoreDisc" min="0" max="100" value="50" oninput="updateSliderVal('Disc', this.value)">
+                                    </div>
+
+                                    <!-- Live Calculated Score Info -->
+                                    <div class="col-12 bg-light p-2 rounded text-center mb-1">
+                                        <span class="small text-secondary text-uppercase d-block" style="font-size: 0.7rem;">Live Score Estimation</span>
+                                        <h5 class="fw-bold mb-0 text-outfit" id="liveAvgEst">50.0 (Average)</h5>
+                                    </div>
+
+                                    <!-- Remarks -->
+                                    <div class="col-12">
+                                        <label for="remarks" class="form-label small fw-semibold">Manager Remarks</label>
+                                        <textarea class="form-control" id="remarks" rows="2" placeholder="Write feedback..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-footer bg-white border-top-0 py-3">
+                                <button type="submit" class="btn btn-primary w-100">Submit Review</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Review History Log -->
+                <div class="col-lg-7">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-white border-0 py-3">
+                            <h6 class="fw-bold mb-0 text-outfit">Review History Log</h6>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="ps-4">Date</th>
+                                            <th>Reviewer</th>
+                                            <th class="text-center">Score</th>
+                                            <th>Rating</th>
+                                            <th class="pe-4">Remarks</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="reviewsHistoryBody">
+                                        <tr>
+                                            <td colspan="5" class="text-center py-4 text-muted">
+                                                Select an employee to check historical logs.
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <th:block th:fragment="scripts">
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                loadEmployees();
+            });
+
+            async function loadEmployees() {
+                try {
+                    const data = await apiRequest('/api/employees?size=100');
+                    const select = document.getElementById('employeeSelect');
+                    data.content.forEach(e => {
+                        select.insertAdjacentHTML('beforeend', `<option value="${e.id}">${e.firstName} ${e.lastName} (${e.employeeCode})</option>`);
+                    });
+                } catch (e) {
+                    console.error("Failed to load employees for review select", e);
+                }
+            }
+
+            function updateSliderVal(metric, val) {
+                document.getElementById(`val${metric}`).innerText = val;
+                calculateLiveAverage();
+            }
+
+            function calculateLiveAverage() {
+                const tech = parseInt(document.getElementById('scoreTech').value);
+                const comm = parseInt(document.getElementById('scoreComm').value);
+                const team = parseInt(document.getElementById('scoreTeam').value);
+                const lead = parseInt(document.getElementById('scoreLead').value);
+                const att =  parseInt(document.getElementById('scoreAtt').value);
+                const prob = parseInt(document.getElementById('scoreProb').value);
+                const innov = parseInt(document.getElementById('scoreInnov').value);
+                const disc = parseInt(document.getElementById('scoreDisc').value);
+
+                const avg = (tech + comm + team + lead + att + prob + innov + disc) / 8.0;
+                
+                let rating;
+                if (avg >= 90.0) rating = "Excellent";
+                else if (avg >= 80.0) rating = "Very Good";
+                else if (avg >= 70.0) rating = "Good";
+                else if (avg >= 50.0) rating = "Average";
+                else rating = "Needs Improvement";
+
+                document.getElementById('liveAvgEst').innerText = `${avg.toFixed(1)} (${rating})`;
+            }
+
+            async function onEmployeeSelected(id) {
+                const reviewFormCard = document.getElementById('reviewFormCard');
+                const avgScoreDisplay = document.getElementById('averageScoreDisplay');
+                const historyBody = document.getElementById('reviewsHistoryBody');
+
+                if (!id) {
+                    if (reviewFormCard) reviewFormCard.classList.add('d-none');
+                    avgScoreDisplay.classList.add('d-none');
+                    historyBody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">Select an employee to check historical logs.</td></tr>`;
+                    return;
+                }
+
+                if (reviewFormCard) reviewFormCard.classList.remove('d-none');
+                avgScoreDisplay.classList.remove('d-none');
+                
+                loadEmployeeReviews(id);
+            }
+
+            async function loadEmployeeReviews(employeeId) {
+                try {
+                    const reviews = await apiRequest(`/api/reviews/employee/${employeeId}`);
+                    const avg = await apiRequest(`/api/reviews/employee/${employeeId}/average`);
+
+                    document.getElementById('cumAvgScore').innerText = avg ? avg.toFixed(1) : 'N/A';
+
+                    const tbody = document.getElementById('reviewsHistoryBody');
+                    if (!reviews || reviews.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">No review logs on file.</td></tr>`;
+                        return;
+                    }
+
+                    tbody.innerHTML = reviews.map(r => `
+                        <tr>
+                            <td class="ps-4"><code>${r.reviewDate}</code></td>
+                            <td>${r.managerName}</td>
+                            <td class="text-center fw-bold text-primary">${r.overallScore.toFixed(1)}</td>
+                            <td><span class="badge bg-secondary">${r.overallRating}</span></td>
+                            <td class="pe-4 text-muted small">${r.remarks || 'No remarks'}</td>
+                        </tr>
+                    `).join('');
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+
+            async function submitReview(event) {
+                event.preventDefault();
+                const employeeId = document.getElementById('employeeSelect').value;
+                if (!employeeId) return;
+
+                const payload = {
+                    employeeId: parseInt(employeeId),
+                    technicalKnowledge: parseInt(document.getElementById('scoreTech').value),
+                    communication: parseInt(document.getElementById('scoreComm').value),
+                    teamwork: parseInt(document.getElementById('scoreTeam').value),
+                    leadership: parseInt(document.getElementById('scoreLead').value),
+                    attendance: parseInt(document.getElementById('scoreAtt').value),
+                    problemSolving: parseInt(document.getElementById('scoreProb').value),
+                    innovation: parseInt(document.getElementById('scoreInnov').value),
+                    discipline: parseInt(document.getElementById('scoreDisc').value),
+                    remarks: document.getElementById('remarks').value
+                };
+
+                try {
+                    await apiRequest('/api/reviews', {
+                        method: 'POST',
+                        body: JSON.stringify(payload)
+                    });
+                    Toast.show('Performance review submitted successfully');
+                    document.getElementById('reviewForm').reset();
+                    // Reset slider values in badges
+                    ['Tech','Comm','Team','Lead','Att','Prob','Innov','Disc'].forEach(m => {
+                        document.getElementById(`val${m}`).innerText = '50';
+                    });
+                    calculateLiveAverage();
+                    loadEmployeeReviews(employeeId);
+                } catch (e) {
+                    // Handled by apiRequest toast
+                }
+            }
+        </script>
+    </th:block>
+</body>
+</html>

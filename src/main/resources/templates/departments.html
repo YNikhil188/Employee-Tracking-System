@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout :: layout('Departments', ~{::main}, ~{::styles}, ~{::scripts})}">
+<head>
+    <th:block th:fragment="styles">
+        <!-- Page-specific styles if any -->
+    </th:block>
+</head>
+<body>
+    <main th:fragment="main">
+        <div class="container-fluid p-0">
+            <!-- Header section -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <p class="text-secondary mb-0">Manage corporate departments and views</p>
+                <button sec:authorize="hasAnyRole('ROLE_ADMIN', 'ROLE_HR')" class="btn btn-primary d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#departmentModal" onclick="prepareCreateModal()">
+                    <i class="bi bi-plus-circle"></i> Add Department
+                </button>
+            </div>
+
+            <!-- Departments Grid/Table Card -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0" id="departmentsTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-4">ID</th>
+                                    <th>Department Name</th>
+                                    <th>Manager Name</th>
+                                    <th>Location</th>
+                                    <th>Description</th>
+                                    <th>Employees Count</th>
+                                    <th class="text-end pe-4">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="departmentsBody">
+                                <!-- Data populated via JS -->
+                                <tr>
+                                    <td colspan="7" class="text-center py-4">
+                                        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                        <span class="ms-2">Loading departments...</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add/Edit Department Modal -->
+        <div class="modal fade" id="departmentModal" tabindex="-1" aria-labelledby="departmentModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header border-bottom-0">
+                        <h5 class="modal-title fw-bold" id="departmentModalLabel">Add Department</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form id="departmentForm" onsubmit="handleFormSubmit(event)">
+                        <div class="modal-body py-3">
+                            <input type="hidden" id="deptId">
+                            <div class="mb-3">
+                                <label for="deptName" class="form-label small fw-semibold">Department Name *</label>
+                                <input type="text" class="form-control" id="deptName" required placeholder="e.g. Technology">
+                            </div>
+                            <div class="mb-3">
+                                <label for="deptManager" class="form-label small fw-semibold">Manager Name *</label>
+                                <input type="text" class="form-control" id="deptManager" required placeholder="e.g. John Doe">
+                            </div>
+                            <div class="mb-3">
+                                <label for="deptLocation" class="form-label small fw-semibold">Location *</label>
+                                <input type="text" class="form-control" id="deptLocation" required placeholder="e.g. London">
+                            </div>
+                            <div class="mb-3">
+                                <label for="deptDesc" class="form-label small fw-semibold">Description</label>
+                                <textarea class="form-control" id="deptDesc" rows="3" placeholder="Brief details about the department..."></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-top-0">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary" id="saveDeptBtn">Save Department</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- View Department Employees Modal -->
+        <div class="modal fade" id="viewEmployeesModal" tabindex="-1" aria-labelledby="viewEmployeesModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header border-bottom-0">
+                        <h5 class="modal-title fw-bold" id="viewEmployeesModalLabel">Department Employees</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body py-3">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Code</th>
+                                        <th>Name</th>
+                                        <th>Designation</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="deptEmployeesBody">
+                                    <!-- Data loaded dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <th:block th:fragment="scripts">
+        <script>
+            let currentUserId = "[[${username}]]";
+            let currentUserRoles = "[[${role}]]";
+            
+            const isAdmin = currentUserRoles.includes("ROLE_ADMIN");
+            const isHR = currentUserRoles.includes("ROLE_HR") || isAdmin;
+
+            document.addEventListener('DOMContentLoaded', () => {
+                loadDepartments();
+            });
+
+            async function loadDepartments() {
+                try {
+                    const departments = await apiRequest('/api/departments');
+                    renderDepartments(departments);
+                } catch (error) {
+                    document.getElementById('departmentsBody').innerHTML = `
+                        <tr>
+                            <td colspan="7" class="text-center text-danger py-4">
+                                <i class="bi bi-exclamation-triangle-fill"></i> Failed to load departments.
+                            </td>
+                        </tr>
+                    `;
+                }
+            }
+
+            function renderDepartments(departments) {
+                const tbody = document.getElementById('departmentsBody');
+                if (!departments || departments.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="7" class="text-center py-4 text-muted">No departments found.</td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                tbody.innerHTML = departments.map(d => `
+                    <tr>
+                        <td class="ps-4">${d.id}</td>
+                        <td class="fw-semibold">${d.name}</td>
+                        <td>${d.manager}</td>
+                        <td>${d.location}</td>
+                        <td class="text-muted small">${d.description || 'N/A'}</td>
+                        <td><span class="badge bg-secondary rounded-pill">${d.employeeCount}</span></td>
+                        <td class="text-end pe-4">
+                            <div class="d-flex justify-content-end gap-2">
+                                <button class="btn btn-sm btn-outline-info" title="View Employees" onclick="viewEmployees(${d.id}, '${d.name}')">
+                                    <i class="bi bi-eye-fill"></i>
+                                </button>
+                                ${isHR ? `
+                                    <button class="btn btn-sm btn-outline-primary" title="Edit" onclick="editDepartment(${d.id})">
+                                        <i class="bi bi-pencil-fill"></i>
+                                    </button>
+                                ` : ''}
+                                ${isAdmin ? `
+                                    <button class="btn btn-sm btn-outline-danger" title="Delete" onclick="deleteDepartment(${d.id}, '${d.name}')">
+                                        <i class="bi bi-trash-fill"></i>
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
+            function prepareCreateModal() {
+                document.getElementById('departmentForm').reset();
+                document.getElementById('deptId').value = '';
+                document.getElementById('departmentModalLabel').innerText = 'Add Department';
+                document.getElementById('saveDeptBtn').innerText = 'Save Department';
+            }
+
+            async function editDepartment(id) {
+                try {
+                    const dept = await apiRequest(`/api/departments/${id}`);
+                    document.getElementById('deptId').value = dept.id;
+                    document.getElementById('deptName').value = dept.name;
+                    document.getElementById('deptManager').value = dept.manager;
+                    document.getElementById('deptLocation').value = dept.location;
+                    document.getElementById('deptDesc').value = dept.description || '';
+                    
+                    document.getElementById('departmentModalLabel').innerText = 'Edit Department';
+                    document.getElementById('saveDeptBtn').innerText = 'Update Department';
+                    
+                    const modal = new bootstrap.Modal(document.getElementById('departmentModal'));
+                    modal.show();
+                } catch (error) {
+                    // Handled by apiRequest
+                }
+            }
+
+            async function handleFormSubmit(event) {
+                event.preventDefault();
+                const id = document.getElementById('deptId').value;
+                const name = document.getElementById('deptName').value;
+                const manager = document.getElementById('deptManager').value;
+                const location = document.getElementById('deptLocation').value;
+                const description = document.getElementById('deptDesc').value;
+
+                const payload = { name, manager, location, description };
+                const url = id ? `/api/departments/${id}` : '/api/departments';
+                const method = id ? 'PUT' : 'POST';
+
+                try {
+                    await apiRequest(url, {
+                        method: method,
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    Toast.show(id ? 'Department updated successfully' : 'Department added successfully');
+                    
+                    // Hide modal
+                    const modalElement = document.getElementById('departmentModal');
+                    const modalInstance = bootstrap.Modal.getInstance(modalElement) || new bootstrap.Modal(modalElement);
+                    modalInstance.hide();
+                    
+                    loadDepartments();
+                } catch (error) {
+                    // Handled by apiRequest toast
+                }
+            }
+
+            async function deleteDepartment(id, name) {
+                if (!confirm(`Are you sure you want to delete the department '${name}'?`)) return;
+
+                try {
+                    await apiRequest(`/api/departments/${id}`, {
+                        method: 'DELETE'
+                    });
+                    Toast.show('Department deleted successfully');
+                    loadDepartments();
+                } catch (error) {
+                    // Handled by apiRequest
+                }
+            }
+
+            async function viewEmployees(id, name) {
+                try {
+                    const employees = await apiRequest(`/api/employees?departmentId=${id}&size=100`);
+                    const tbody = document.getElementById('deptEmployeesBody');
+                    document.getElementById('viewEmployeesModalLabel').innerText = `Employees in ${name}`;
+
+                    if (!employees.content || employees.content.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-3">No active employees in this department.</td></tr>`;
+                    } else {
+                        tbody.innerHTML = employees.content.map(emp => `
+                            <tr>
+                                <td><code>${emp.employeeCode}</code></td>
+                                <td class="fw-semibold">${emp.firstName} ${emp.lastName}</td>
+                                <td>${emp.designation}</td>
+                                <td>
+                                    <span class="badge ${emp.status === 'ACTIVE' ? 'badge-active' : 'badge-inactive'}">
+                                        ${emp.status}
+                                    </span>
+                                </td>
+                            </tr>
+                        `).join('');
+                    }
+
+                    const modal = new bootstrap.Modal(document.getElementById('viewEmployeesModal'));
+                    modal.show();
+                } catch (error) {
+                    // Handled by apiRequest
+                }
+            }
+        </script>
+    </th:block>
+</body>
+</html>

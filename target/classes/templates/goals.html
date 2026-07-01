@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout :: layout('Goals Management', ~{::main}, ~{::styles}, ~{::scripts})}">
+<head>
+    <th:block th:fragment="styles">
+        <!-- Page specific styles -->
+    </th:block>
+</head>
+<body>
+    <main th:fragment="main">
+        <div class="container-fluid p-0">
+            <div class="row g-4">
+                <!-- Employee Selector -->
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-header bg-white border-0 py-3">
+                            <h6 class="fw-bold mb-0 text-outfit">Select Employee</h6>
+                        </div>
+                        <div class="card-body">
+                            <label for="employeeSelect" class="form-label small fw-semibold">Employee Name</label>
+                            <select class="form-select" id="employeeSelect" onchange="onEmployeeSelected(this.value)">
+                                <option value="">Select an employee...</option>
+                            </select>
+                        </div>
+                    </div>
+                    <!-- Assign Goal Card (Admins & Managers only) -->
+                    <div sec:authorize="hasAnyRole('ROLE_ADMIN', 'ROLE_MANAGER')" class="card border-0 shadow-sm d-none" id="assignGoalCard">
+                        <div class="card-header bg-white border-0 py-3">
+                            <h6 class="fw-bold mb-0 text-outfit">Assign New Goal</h6>
+                        </div>
+                        <form id="goalForm" onsubmit="assignGoal(event)">
+                            <div class="card-body py-2">
+                                <div class="mb-3">
+                                    <label for="goalName" class="form-label small fw-semibold">Goal Objective *</label>
+                                    <input type="text" class="form-control" id="goalName" required placeholder="e.g. Relational database optimization">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="goalDeadline" class="form-label small fw-semibold">Deadline *</label>
+                                    <input type="date" class="form-control" id="goalDeadline" required>
+                                </div>
+                            </div>
+                            <div class="card-footer bg-white border-top-0 py-3">
+                                <button type="submit" class="btn btn-primary w-100">Assign Goal</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Goals Listing -->
+                <div class="col-md-8">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-white border-0 py-3">
+                            <h6 class="fw-bold mb-0 text-outfit">Assigned Goals & Progress</h6>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="ps-4">Goal Name</th>
+                                            <th>Deadline</th>
+                                            <th style="width: 30%;">Progress</th>
+                                            <th>Status</th>
+                                            <th class="text-end pe-4">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="goalsHistoryBody">
+                                        <tr>
+                                            <td colspan="5" class="text-center py-4 text-muted">
+                                                Select an employee to view assigned goals.
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress update Modal -->
+        <div class="modal fade" id="progressModal" tabindex="-1" aria-labelledby="progressModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header border-bottom-0">
+                        <h5 class="modal-title fw-bold" id="progressModalLabel">Update Goal Progress</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form id="progressForm" onsubmit="saveProgress(event)">
+                        <div class="modal-body py-3">
+                            <input type="hidden" id="editGoalId">
+                            <div class="mb-4">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <label for="editProgress" class="form-label small fw-semibold mb-0">Progress Percentage</label>
+                                    <span class="badge bg-primary" id="valEditProgress">0%</span>
+                                </div>
+                                <input type="range" class="form-range" id="editProgress" min="0" max="100" value="0" oninput="document.getElementById('valEditProgress').innerText = this.value + '%'">
+                            </div>
+                            <div class="mb-3">
+                                <label for="editStatus" class="form-label small fw-semibold">Goal Status</label>
+                                <select class="form-select" id="editStatus" required>
+                                    <option value="PENDING">PENDING</option>
+                                    <option value="IN_PROGRESS">IN_PROGRESS</option>
+                                    <option value="COMPLETED">COMPLETED</option>
+                                    <option value="CANCELLED">CANCELLED</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-top-0">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <th:block th:fragment="scripts">
+        <script>
+            let currentUserRoles = "[[${role}]]";
+            const isAdmin = currentUserRoles.includes("ROLE_ADMIN");
+            const isManager = currentUserRoles.includes("ROLE_MANAGER") || isAdmin;
+
+            document.addEventListener('DOMContentLoaded', () => {
+                loadEmployees();
+                // Set default date for deadline (1 month from now)
+                const defaultDeadline = new Date();
+                defaultDeadline.setMonth(defaultDeadline.getMonth() + 1);
+                document.getElementById('goalDeadline').value = defaultDeadline.toISOString().split('T')[0];
+            });
+
+            async function loadEmployees() {
+                try {
+                    const data = await apiRequest('/api/employees?size=100');
+                    const select = document.getElementById('employeeSelect');
+                    data.content.forEach(e => {
+                        select.insertAdjacentHTML('beforeend', `<option value="${e.id}">${e.firstName} ${e.lastName} (${e.employeeCode})</option>`);
+                    });
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+
+            function onEmployeeSelected(id) {
+                const assignGoalCard = document.getElementById('assignGoalCard');
+                const tbody = document.getElementById('goalsHistoryBody');
+
+                if (!id) {
+                    if (assignGoalCard) assignGoalCard.classList.add('d-none');
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">Select an employee to view assigned goals.</td></tr>`;
+                    return;
+                }
+
+                if (assignGoalCard) assignGoalCard.classList.remove('d-none');
+                loadEmployeeGoals(id);
+            }
+
+            async function loadEmployeeGoals(employeeId) {
+                try {
+                    const goals = await apiRequest(`/api/goals/employee/${employeeId}`);
+                    const tbody = document.getElementById('goalsHistoryBody');
+                    
+                    if (!goals || goals.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">No goals currently assigned.</td></tr>`;
+                        return;
+                    }
+
+                    tbody.innerHTML = goals.map(g => {
+                        let statusColor = 'bg-secondary';
+                        if (g.status === 'COMPLETED') statusColor = 'bg-success';
+                        else if (g.status === 'IN_PROGRESS') statusColor = 'bg-warning text-dark';
+                        else if (g.status === 'CANCELLED') statusColor = 'bg-danger';
+
+                        return `
+                            <tr>
+                                <td class="ps-4 fw-semibold">${g.goalName}</td>
+                                <td><code>${g.deadline}</code></td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="progress flex-grow-1" style="height: 6px;">
+                                            <div class="progress-bar" role="progressbar" style="width: ${g.progress}%" aria-valuenow="${g.progress}" aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                        <span class="small text-muted">${g.progress}%</span>
+                                    </div>
+                                </td>
+                                <td><span class="badge ${statusColor}">${g.status}</span></td>
+                                <td class="text-end pe-4">
+                                    <div class="d-flex justify-content-end gap-2">
+                                        ${isManager ? `
+                                            <button class="btn btn-sm btn-outline-primary" title="Update Progress" onclick="editProgress(${g.id}, ${g.progress}, '${g.status}')">
+                                                <i class="bi bi-sliders"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" title="Delete" onclick="deleteGoal(${g.id})">
+                                                <i class="bi bi-trash-fill"></i>
+                                            </button>
+                                        ` : '<span class="text-muted small">None</span>'}
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+
+            async function assignGoal(event) {
+                event.preventDefault();
+                const employeeId = document.getElementById('employeeSelect').value;
+                if (!employeeId) return;
+
+                const payload = {
+                    employeeId: parseInt(employeeId),
+                    goalName: document.getElementById('goalName').value,
+                    deadline: document.getElementById('goalDeadline').value,
+                    progress: 0,
+                    status: 'PENDING'
+                };
+
+                try {
+                    await apiRequest('/api/goals', {
+                        method: 'POST',
+                        body: JSON.stringify(payload)
+                    });
+                    Toast.show('Goal assigned successfully');
+                    document.getElementById('goalName').value = '';
+                    loadEmployeeGoals(employeeId);
+                } catch (e) {
+                    // Handled by apiRequest toast
+                }
+            }
+
+            function editProgress(id, progress, status) {
+                document.getElementById('editGoalId').value = id;
+                document.getElementById('editProgress').value = progress;
+                document.getElementById('valEditProgress').innerText = progress + '%';
+                document.getElementById('editStatus').value = status;
+                
+                const modal = new bootstrap.Modal(document.getElementById('progressModal'));
+                modal.show();
+            }
+
+            async function saveProgress(event) {
+                event.preventDefault();
+                const id = document.getElementById('editGoalId').value;
+                const progress = document.getElementById('editProgress').value;
+                const status = document.getElementById('editStatus').value;
+                const employeeId = document.getElementById('employeeSelect').value;
+
+                try {
+                    await apiRequest(`/api/goals/${id}?progress=${progress}&status=${status}`, {
+                        method: 'PUT'
+                    });
+                    Toast.show('Goal progress updated successfully');
+                    
+                    const modalElement = document.getElementById('progressModal');
+                    const modalInstance = bootstrap.Modal.getInstance(modalElement) || new bootstrap.Modal(modalElement);
+                    modalInstance.hide();
+                    
+                    loadEmployeeGoals(employeeId);
+                } catch (e) {
+                    // Handled by apiRequest
+                }
+            }
+
+            async function deleteGoal(id) {
+                if (!confirm('Are you sure you want to delete this goal?')) return;
+                const employeeId = document.getElementById('employeeSelect').value;
+
+                try {
+                    await apiRequest(`/api/goals/${id}`, {
+                        method: 'DELETE'
+                    });
+                    Toast.show('Goal deleted successfully');
+                    loadEmployeeGoals(employeeId);
+                } catch (e) {
+                    // Handled by apiRequest
+                }
+            }
+        </script>
+    </th:block>
+</body>
+</html>

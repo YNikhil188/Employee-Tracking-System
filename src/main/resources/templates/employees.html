@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout :: layout('Employees', ~{::main}, ~{::styles}, ~{::scripts})}">
+<head>
+    <th:block th:fragment="styles">
+        <!-- Page specific styles -->
+    </th:block>
+</head>
+<body>
+    <main th:fragment="main">
+        <div class="container-fluid p-0">
+            <!-- Header section -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <p class="text-secondary mb-0">Manage corporate directory, search, filter and pagination</p>
+                <button sec:authorize="hasAnyRole('ROLE_ADMIN', 'ROLE_HR')" class="btn btn-primary d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#employeeModal" onclick="prepareCreateModal()">
+                    <i class="bi bi-plus-circle"></i> Add Employee
+                </button>
+            </div>
+
+            <!-- Search and Filter Bar -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <form id="filterForm" class="row g-3" onsubmit="handleFilterSubmit(event)">
+                        <div class="col-md-4">
+                            <label for="searchQuery" class="form-label small fw-semibold">Search Name/Code/Designation</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                <input type="text" class="form-control" id="searchQuery" placeholder="Search...">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="filterDepartment" class="form-label small fw-semibold">Department</label>
+                            <select class="form-select" id="filterDepartment">
+                                <option value="">All Departments</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="filterDesignation" class="form-label small fw-semibold">Designation</label>
+                            <select class="form-select" id="filterDesignation">
+                                <option value="">All Designations</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="filterStatus" class="form-label small fw-semibold">Status</label>
+                            <select class="form-select" id="filterStatus">
+                                <option value="">All Statuses</option>
+                                <option value="ACTIVE">ACTIVE</option>
+                                <option value="INACTIVE">INACTIVE</option>
+                            </select>
+                        </div>
+                        <div class="col-12 d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="resetFilters()">Reset</button>
+                            <button type="submit" class="btn btn-primary btn-sm px-4">Apply Filters</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Employees Table Card -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-4">Code</th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Department</th>
+                                    <th>Designation</th>
+                                    <th>Salary</th>
+                                    <th>Status</th>
+                                    <th class="text-end pe-4">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="employeesBody">
+                                <tr>
+                                    <td colspan="8" class="text-center py-4">
+                                        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                        <span class="ms-2">Loading employees...</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <!-- Pagination Footer -->
+                <div class="card-footer bg-white border-0 py-3 d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3">
+                    <div class="small text-muted" id="paginationInfo">
+                        Showing 0 to 0 of 0 entries
+                    </div>
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination pagination-sm mb-0" id="paginationControls">
+                            <!-- Populated dynamically -->
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add/Edit Employee Modal -->
+        <div class="modal fade" id="employeeModal" tabindex="-1" aria-labelledby="employeeModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header border-bottom-0">
+                        <h5 class="modal-title fw-bold" id="employeeModalLabel">Add Employee</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form id="employeeForm" onsubmit="handleFormSubmit(event)">
+                        <div class="modal-body py-3">
+                            <input type="hidden" id="empId">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label for="empCode" class="form-label small fw-semibold">Employee Code *</label>
+                                    <input type="text" class="form-control" id="empCode" required placeholder="e.g. EMP001">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="firstName" class="form-label small fw-semibold">First Name *</label>
+                                    <input type="text" class="form-control" id="firstName" required placeholder="e.g. John">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="lastName" class="form-label small fw-semibold">Last Name *</label>
+                                    <input type="text" class="form-control" id="lastName" required placeholder="e.g. Doe">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="email" class="form-label small fw-semibold">Email Address *</label>
+                                    <input type="email" class="form-control" id="email" required placeholder="name@company.com">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="phone" class="form-label small fw-semibold">Phone Number</label>
+                                    <input type="text" class="form-control" id="phone" placeholder="+1-123-456-7890">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="gender" class="form-label small fw-semibold">Gender *</label>
+                                    <select class="form-select" id="gender" required>
+                                        <option value="">Select Gender</option>
+                                        <option value="Male">Male</option>
+                                        <option value="Female">Female</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="dob" class="form-label small fw-semibold">Date of Birth *</label>
+                                    <input type="date" class="form-control" id="dob" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="joiningDate" class="form-label small fw-semibold">Joining Date *</label>
+                                    <input type="date" class="form-control" id="joiningDate" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="department" class="form-label small fw-semibold">Department *</label>
+                                    <select class="form-select" id="department" required>
+                                        <option value="">Select Department</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="designation" class="form-label small fw-semibold">Designation *</label>
+                                    <input type="text" class="form-control" id="designation" required placeholder="e.g. Software Engineer">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="salary" class="form-label small fw-semibold">Salary *</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" class="form-control" id="salary" required min="1" step="any" placeholder="e.g. 75000">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="status" class="form-label small fw-semibold">Status *</label>
+                                    <select class="form-select" id="status" required>
+                                        <option value="ACTIVE">ACTIVE</option>
+                                        <option value="INACTIVE">INACTIVE</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-top-0">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary" id="saveEmpBtn">Save Employee</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <th:block th:fragment="scripts">
+        <script>
+            let currentUserRoles = "[[${role}]]";
+            const isAdmin = currentUserRoles.includes("ROLE_ADMIN");
+            const isHR = currentUserRoles.includes("ROLE_HR") || isAdmin;
+
+            let currentPage = 0;
+            let currentSize = 10;
+            let currentSortBy = 'id';
+            let currentSortDir = 'asc';
+
+            document.addEventListener('DOMContentLoaded', () => {
+                initFilters();
+                loadEmployees();
+            });
+
+            async function initFilters() {
+                try {
+                    // Populate department lists
+                    const depts = await apiRequest('/api/departments');
+                    const filterDept = document.getElementById('filterDepartment');
+                    const modalDept = document.getElementById('department');
+
+                    depts.forEach(d => {
+                        const opt = `<option value="${d.id}">${d.name}</option>`;
+                        filterDept.insertAdjacentHTML('beforeend', opt);
+                        modalDept.insertAdjacentHTML('beforeend', opt);
+                    });
+
+                    // Populate designations
+                    const desigs = await apiRequest('/api/employees/designations');
+                    const filterDesig = document.getElementById('filterDesignation');
+                    desigs.forEach(d => {
+                        filterDesig.insertAdjacentHTML('beforeend', `<option value="${d}">${d}</option>`);
+                    });
+                } catch (error) {
+                    console.error("Failed to load filter dropdowns", error);
+                }
+            }
+
+            async function loadEmployees() {
+                const term = document.getElementById('searchQuery').value;
+                const deptId = document.getElementById('filterDepartment').value;
+                const designation = document.getElementById('filterDesignation').value;
+                const status = document.getElementById('filterStatus').value;
+
+                let url = `/api/employees?page=${currentPage}&size=${currentSize}&sortBy=${currentSortBy}&sortDir=${currentSortDir}`;
+                if (term) url += `&term=${encodeURIComponent(term)}`;
+                if (deptId) url += `&departmentId=${deptId}`;
+                if (designation) url += `&designation=${encodeURIComponent(designation)}`;
+                if (status) url += `&status=${status}`;
+
+                try {
+                    const data = await apiRequest(url);
+                    renderEmployees(data.content);
+                    renderPagination(data);
+                } catch (error) {
+                    document.getElementById('employeesBody').innerHTML = `
+                        <tr>
+                            <td colspan="8" class="text-center text-danger py-4">
+                                <i class="bi bi-exclamation-triangle-fill"></i> Failed to load employees.
+                            </td>
+                        </tr>
+                    `;
+                }
+            }
+
+            function renderEmployees(employees) {
+                const tbody = document.getElementById('employeesBody');
+                if (!employees || employees.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="8" class="text-center py-4 text-muted">No employees found.</td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                tbody.innerHTML = employees.map(e => `
+                    <tr>
+                        <td class="ps-4"><code>${e.employeeCode}</code></td>
+                        <td class="fw-semibold">${e.firstName} ${e.lastName}</td>
+                        <td>${e.email}</td>
+                        <td>${e.departmentName}</td>
+                        <td>${e.designation}</td>
+                        <td>$${e.salary.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                        <td>
+                            <span class="badge ${e.status === 'ACTIVE' ? 'badge-active' : 'badge-inactive'}">
+                                ${e.status}
+                            </span>
+                        </td>
+                        <td class="text-end pe-4">
+                            <div class="d-flex justify-content-end gap-2">
+                                ${isHR ? `
+                                    <button class="btn btn-sm btn-outline-primary" title="Edit" onclick="editEmployee(${e.id})">
+                                        <i class="bi bi-pencil-fill"></i>
+                                    </button>
+                                ` : ''}
+                                ${isAdmin ? `
+                                    <button class="btn btn-sm btn-outline-danger" title="Delete" onclick="deleteEmployee(${e.id}, '${e.firstName} ${e.lastName}')">
+                                        <i class="bi bi-trash-fill"></i>
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
+            function renderPagination(pageData) {
+                const info = document.getElementById('paginationInfo');
+                const controls = document.getElementById('paginationControls');
+
+                const totalElements = pageData.totalElements;
+                const totalPages = pageData.totalPages;
+                const size = pageData.size;
+                const start = totalElements === 0 ? 0 : (currentPage * size) + 1;
+                const end = Math.min((currentPage + 1) * size, totalElements);
+
+                info.innerText = `Showing ${start} to ${end} of ${totalElements} entries`;
+
+                let html = '';
+                // Previous button
+                html += `
+                    <li class="page-item ${currentPage === 0 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="changePage(${currentPage - 1}); return false;">Previous</a>
+                    </li>
+                `;
+
+                // Page numbers
+                for (let i = 0; i < totalPages; i++) {
+                    html += `
+                        <li class="page-item ${currentPage === i ? 'active' : ''}">
+                            <a class="page-link" href="#" onclick="changePage(${i}); return false;">${i + 1}</a>
+                        </li>
+                    `;
+                }
+
+                // Next button
+                html += `
+                    <li class="page-item ${currentPage === totalPages - 1 || totalPages === 0 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" onclick="changePage(${currentPage + 1}); return false;">Next</a>
+                    </li>
+                `;
+
+                controls.innerHTML = html;
+            }
+
+            function changePage(page) {
+                currentPage = page;
+                loadEmployees();
+            }
+
+            function handleFilterSubmit(event) {
+                event.preventDefault();
+                currentPage = 0;
+                loadEmployees();
+            }
+
+            function resetFilters() {
+                document.getElementById('filterForm').reset();
+                currentPage = 0;
+                loadEmployees();
+            }
+
+            function prepareCreateModal() {
+                document.getElementById('employeeForm').reset();
+                document.getElementById('empId').value = '';
+                document.getElementById('empCode').disabled = false;
+                document.getElementById('employeeModalLabel').innerText = 'Add Employee';
+                document.getElementById('saveEmpBtn').innerText = 'Save Employee';
+            }
+
+            async function editEmployee(id) {
+                try {
+                    const e = await apiRequest(`/api/employees/${id}`);
+                    document.getElementById('empId').value = e.id;
+                    document.getElementById('empCode').value = e.employeeCode;
+                    document.getElementById('empCode').disabled = true; // Emp code usually immutable
+                    document.getElementById('firstName').value = e.firstName;
+                    document.getElementById('lastName').value = e.lastName;
+                    document.getElementById('email').value = e.email;
+                    document.getElementById('phone').value = e.phone || '';
+                    document.getElementById('gender').value = e.gender;
+                    document.getElementById('dob').value = e.dateOfBirth;
+                    document.getElementById('joiningDate').value = e.joiningDate;
+                    document.getElementById('department').value = e.departmentId;
+                    document.getElementById('designation').value = e.designation;
+                    document.getElementById('salary').value = e.salary;
+                    document.getElementById('status').value = e.status;
+
+                    document.getElementById('employeeModalLabel').innerText = 'Edit Employee';
+                    document.getElementById('saveEmpBtn').innerText = 'Update Employee';
+
+                    const modal = new bootstrap.Modal(document.getElementById('employeeModal'));
+                    modal.show();
+                } catch (error) {
+                    // Handled by apiRequest
+                }
+            }
+
+            async function handleFormSubmit(event) {
+                event.preventDefault();
+                const id = document.getElementById('empId').value;
+                
+                const payload = {
+                    employeeCode: document.getElementById('empCode').value,
+                    firstName: document.getElementById('firstName').value,
+                    lastName: document.getElementById('lastName').value,
+                    email: document.getElementById('email').value,
+                    phone: document.getElementById('phone').value,
+                    gender: document.getElementById('gender').value,
+                    dateOfBirth: document.getElementById('dob').value,
+                    joiningDate: document.getElementById('joiningDate').value,
+                    departmentId: document.getElementById('department').value,
+                    designation: document.getElementById('designation').value,
+                    salary: parseFloat(document.getElementById('salary').value),
+                    status: document.getElementById('status').value
+                };
+
+                const url = id ? `/api/employees/${id}` : '/api/employees';
+                const method = id ? 'PUT' : 'POST';
+
+                try {
+                    await apiRequest(url, {
+                        method: method,
+                        body: JSON.stringify(payload)
+                    });
+
+                    Toast.show(id ? 'Employee updated successfully' : 'Employee added successfully');
+
+                    const modalElement = document.getElementById('employeeModal');
+                    const modalInstance = bootstrap.Modal.getInstance(modalElement) || new bootstrap.Modal(modalElement);
+                    modalInstance.hide();
+
+                    loadEmployees();
+                } catch (error) {
+                    // Handled by apiRequest
+                }
+            }
+
+            async function deleteEmployee(id, name) {
+                if (!confirm(`Are you sure you want to delete employee '${name}'?`)) return;
+
+                try {
+                    await apiRequest(`/api/employees/${id}`, {
+                        method: 'DELETE'
+                    });
+                    Toast.show('Employee deleted successfully');
+                    loadEmployees();
+                } catch (error) {
+                    // Handled by apiRequest
+                }
+            }
+        </script>
+    </th:block>
+</body>
+</html>

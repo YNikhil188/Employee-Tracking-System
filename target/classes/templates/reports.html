@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout :: layout('System Reports', ~{::main}, ~{::styles}, ~{::scripts})}">
+<head>
+    <th:block th:fragment="styles">
+        <!-- Page specific styles -->
+    </th:block>
+</head>
+<body>
+    <main th:fragment="main">
+        <div class="container-fluid p-0">
+            <p class="text-secondary mb-4">Export administrative, departmental, performance, and promotional directories into standard formats.</p>
+
+            <div class="row g-4">
+                <!-- Employees Report Card -->
+                <div class="col-md-6 col-lg-3">
+                    <div class="card border-0 shadow-sm h-100 text-center py-4 px-3">
+                        <div class="card-body d-flex flex-column align-items-center justify-content-between">
+                            <div class="mb-3 bg-primary-subtle text-primary p-3 rounded-circle fs-3">
+                                <i class="bi bi-people-fill"></i>
+                            </div>
+                            <h5 class="card-title text-dark fw-bold mb-2">Employees Directory</h5>
+                            <p class="text-secondary small mb-4">Export all active/inactive employee profiles, phone logs, designations, and salaries.</p>
+                            <div class="d-flex flex-wrap justify-content-center gap-2 w-100">
+                                <a th:href="@{/api/reports/employees/excel}" class="btn btn-sm btn-outline-success flex-grow-1"><i class="bi bi-file-earmark-excel"></i> Excel</a>
+                                <a th:href="@{/api/reports/employees/pdf}" class="btn btn-sm btn-outline-danger flex-grow-1"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+                                <a th:href="@{/api/reports/employees/csv}" class="btn btn-sm btn-outline-secondary flex-grow-1"><i class="bi bi-filetype-csv"></i> CSV</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Departments Report Card -->
+                <div class="col-md-6 col-lg-3">
+                    <div class="card border-0 shadow-sm h-100 text-center py-4 px-3">
+                        <div class="card-body d-flex flex-column align-items-center justify-content-between">
+                            <div class="mb-3 bg-success-subtle text-success p-3 rounded-circle fs-3">
+                                <i class="bi bi-building-fill"></i>
+                            </div>
+                            <h5 class="card-title text-dark fw-bold mb-2">Departments Summary</h5>
+                            <p class="text-secondary small mb-4">Export company departments list along with managers, locations, and headcount counts.</p>
+                            <div class="d-flex flex-wrap justify-content-center gap-2 w-100">
+                                <a th:href="@{/api/reports/departments/excel}" class="btn btn-sm btn-outline-success flex-grow-1"><i class="bi bi-file-earmark-excel"></i> Excel</a>
+                                <a th:href="@{/api/reports/departments/pdf}" class="btn btn-sm btn-outline-danger flex-grow-1"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+                                <a th:href="@{/api/reports/departments/csv}" class="btn btn-sm btn-outline-secondary flex-grow-1"><i class="bi bi-filetype-csv"></i> CSV</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Performance Reviews Report Card -->
+                <div class="col-md-6 col-lg-3">
+                    <div class="card border-0 shadow-sm h-100 text-center py-4 px-3">
+                        <div class="card-body d-flex flex-column align-items-center justify-content-between">
+                            <div class="mb-3 bg-warning-subtle text-warning p-3 rounded-circle fs-3">
+                                <i class="bi bi-star-fill"></i>
+                            </div>
+                            <h5 class="card-title text-dark fw-bold mb-2">Performance Summary</h5>
+                            <p class="text-secondary small mb-4">Export all historical manager review grades, metric scores, overall ratings, and comments.</p>
+                            <div class="d-flex flex-wrap justify-content-center gap-2 w-100">
+                                <a th:href="@{/api/reports/performance/excel}" class="btn btn-sm btn-outline-success flex-grow-1"><i class="bi bi-file-earmark-excel"></i> Excel</a>
+                                <a th:href="@{/api/reports/performance/pdf}" class="btn btn-sm btn-outline-danger flex-grow-1"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+                                <a th:href="@{/api/reports/performance/csv}" class="btn btn-sm btn-outline-secondary flex-grow-1"><i class="bi bi-filetype-csv"></i> CSV</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Promotion Recommendations Report Card -->
+                <div class="col-md-6 col-lg-3">
+                    <div class="card border-0 shadow-sm h-100 text-center py-4 px-3">
+                        <div class="card-body d-flex flex-column align-items-center justify-content-between">
+                            <div class="mb-3 bg-info-subtle text-info p-3 rounded-circle fs-3">
+                                <i class="bi bi-award-fill"></i>
+                            </div>
+                            <h5 class="card-title text-dark fw-bold mb-2">Promotions Auditing</h5>
+                            <p class="text-secondary small mb-4">Export real-time eligible promotion candidates computed automatically by the engine.</p>
+                            <div class="d-flex flex-wrap justify-content-center gap-2 w-100">
+                                <a th:href="@{/api/reports/promotions/excel}" class="btn btn-sm btn-outline-success flex-grow-1"><i class="bi bi-file-earmark-excel"></i> Excel</a>
+                                <a th:href="@{/api/reports/promotions/pdf}" class="btn btn-sm btn-outline-danger flex-grow-1"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+                                <a th:href="@{/api/reports/promotions/csv}" class="btn btn-sm btn-outline-secondary flex-grow-1"><i class="bi bi-filetype-csv"></i> CSV</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <th:block th:fragment="scripts">
+        <!-- Page specific scripts -->
+    </th:block>
+</body>
+</html>
